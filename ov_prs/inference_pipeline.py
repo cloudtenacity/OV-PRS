@@ -16,16 +16,16 @@ import torch.nn.functional as F
 from PIL import Image
 import cv2
 
-from config_panoworld import MAX_NEW_TOKENS, DO_SAMPLE, NUM_BEAMS
-from load_panoworld import load_panoworld
+from ov_prs.config_panoworld import MAX_NEW_TOKENS, DO_SAMPLE, NUM_BEAMS
+from ov_prs.load_panoworld import load_panoworld
 
-from trainv1_stage1_2 import (
+from ov_prs.training.trainv1_stage1_2 import (
     OUTPUT_DIR, build_models, load_aligned_checkpoint, validate_aligned_checkpoint,
     DEVICE, IMAGE_SIZE, MIN_PRED_AREA, PW_FEAT_HW, PW_FEATURE_LAYERS,
     yaw_pitch_to_norm, build_point_attention, extract_topk_proposals,
     encode_proposals_with_clip,
 )
-from trainv1_stage3 import FEAT_DIM, TOPK_COLLECT, RerankScorer, compute_proposal_features
+from ov_prs.training.trainv1_stage3 import FEAT_DIM, TOPK_COLLECT, RerankScorer, compute_proposal_features
 
 # ================= Settings =================
 PW_INPUT_W    = 2048   # PanoWorld input width

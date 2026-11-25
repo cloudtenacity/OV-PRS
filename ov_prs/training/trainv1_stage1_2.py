@@ -38,9 +38,9 @@ Checkpoint initialization
     initializes the mapper from stage1/best. A resumed phase loads its
     trained components from its own best checkpoint.
 
-    RESUME_STAGE0=1 TRAIN_STAGE=0 python trainv1_stage1_2.py
-    RESUME_STAGE1=1 TRAIN_STAGE=1 python trainv1_stage1_2.py
-    RESUME_STAGE2=1 TRAIN_STAGE=2 python trainv1_stage1_2.py
+    RESUME_STAGE0=1 TRAIN_STAGE=0 python -m ov_prs.training.trainv1_stage1_2
+    RESUME_STAGE1=1 TRAIN_STAGE=1 python -m ov_prs.training.trainv1_stage1_2
+    RESUME_STAGE2=1 TRAIN_STAGE=2 python -m ov_prs.training.trainv1_stage1_2
 
     Set BEST_SCORE_OVERRIDE when resuming from a checkpoint whose previous
     best score is unavailable in best_meta.json.
@@ -76,7 +76,7 @@ from transformers import (
     CLIPModel,
 )
 
-from config_panoworld import CACHE_DIR, CLIP_PATH, DATA_ROOT, DEVICE, MASK2FORMER_PATH, OUTPUT_DIR
+from ov_prs.config_panoworld import CACHE_DIR, CLIP_PATH, DATA_ROOT, DEVICE, MASK2FORMER_PATH, OUTPUT_DIR
 
 VERSION = "1.0"
 

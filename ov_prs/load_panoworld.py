@@ -6,8 +6,8 @@ import sys
 import torch
 from safetensors import safe_open
 
-from config_panoworld import DEVICE, PANOWORLD_PATH, PANOWORLD_REPO, build_cfg
-from prepare_panoworld_checkpoint import LEGACY_PREFIXES, weight_files
+from ov_prs.config_panoworld import DEVICE, PANOWORLD_PATH, PANOWORLD_REPO, build_cfg
+from ov_prs.prepare_panoworld_checkpoint import LEGACY_PREFIXES, weight_files
 
 
 def _upstream_loader():

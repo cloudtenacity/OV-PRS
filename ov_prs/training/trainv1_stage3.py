@@ -6,10 +6,10 @@ All 12 input features are available at inference. The loader also accepts
 legacy 13-feature caches. Training selects the best top-1 ranker on
 base_test and monitors Novel and OOD. Evaluation reads saved features.
 
-    python trainv1_stage3.py --stage collect
-    python trainv1_stage3.py --stage train
-    python trainv1_stage3.py --stage eval
-    python trainv1_stage3.py --stage collect --force_collect
+    python -m ov_prs.training.trainv1_stage3 --stage collect
+    python -m ov_prs.training.trainv1_stage3 --stage train
+    python -m ov_prs.training.trainv1_stage3 --stage eval
+    python -m ov_prs.training.trainv1_stage3 --stage collect --force_collect
 """
 import argparse
 import glob
@@ -26,8 +26,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 import cv2
 
-from config_panoworld import OUTPUT_DIR
-from trainv1_stage1_2 import (
+from ov_prs.config_panoworld import OUTPUT_DIR
+from ov_prs.training.trainv1_stage1_2 import (
     build_models, CachedPanoWorldWrapper, APRSReferDataset,
     encode_proposals_with_clip, extract_topk_proposals,
     compute_iou, load_pw_feats, build_priors_for_batch, collate_fn,
@@ -481,7 +481,7 @@ def stage_train(epochs=30, lr=1e-3, seed=42, eval_every=5):
 
     if "base_test" not in monitors:
         print("\n  ❌ 没有 base_test，无法选 best")
-        print("     先跑：python trainv1_stage3.py --stage collect "
+        print("     先跑：python -m ov_prs.training.trainv1_stage3 --stage collect "
               "--collect_splits base_test novel_test ood")
         return
 

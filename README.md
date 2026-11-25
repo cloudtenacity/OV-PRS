@@ -1,8 +1,18 @@
-# OV-PRS
-
-Open-vocabulary referring segmentation for 360° ERP panoramas.
+<div align="center">
+  <h1>OV-PRS</h1>
+  <p>Open-vocabulary referring segmentation for 360° ERP panoramas.</p>
+  <img src="docs/teaser.png" alt="Robot Only Look Once overview, from single-panorama referring segmentation to inspection target acquisition." width="920">
+</div>
 
 **Release status.** The OV-PRS trained checkpoints and OV-PanoReferSeg dataset are pending release.
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| [`ov_prs/training/`](ov_prs/training/) | Proposal and alignment training, then ranker training |
+| [`ov_prs/feature_cache/`](ov_prs/feature_cache/) | Precompute PanoWorld features |
+| [`ov_prs/`](ov_prs/) | Inference, evaluation, and model setup |
 
 ## Install
 
@@ -25,7 +35,7 @@ export PANOWORLD_MODEL=/path/to/PanoWorld_Hstar
 If the loader reports legacy tensor names, convert the Hstar checkpoint and update its path.
 
 ```bash
-python prepare_panoworld_checkpoint.py "$PANOWORLD_MODEL" checkpoints/PanoWorld_Hstar_fixed
+python -m ov_prs.prepare_panoworld_checkpoint "$PANOWORLD_MODEL" checkpoints/PanoWorld_Hstar_fixed
 export PANOWORLD_MODEL="$PWD/checkpoints/PanoWorld_Hstar_fixed"
 ```
 
@@ -42,22 +52,22 @@ data/<split>/data/<category>/mask/<unique_name>.png
 The CSV has `unique_name`, `category`, `description`, and `target_word` columns.
 
 ```bash
-python cash_panoworld.py
-TRAIN_STAGE=0 python trainv1_stage1_2.py
-TRAIN_STAGE=1 python trainv1_stage1_2.py
-TRAIN_STAGE=2 python trainv1_stage1_2.py
-python trainv1_stage3.py --stage all
-python evaluate.py --no_vis
+python -m ov_prs.feature_cache.cash_panoworld
+TRAIN_STAGE=0 python -m ov_prs.training.trainv1_stage1_2
+TRAIN_STAGE=1 python -m ov_prs.training.trainv1_stage1_2
+TRAIN_STAGE=2 python -m ov_prs.training.trainv1_stage1_2
+python -m ov_prs.training.trainv1_stage3 --stage all
+python -m ov_prs.evaluate --no_vis
 ```
 
-Training writes checkpoints to `outputs/` by default. If using an existing OV-PRS checkpoint, pass its root to `evaluate.py` with `--checkpoint-dir`.
+Training writes checkpoints to `outputs/` by default. If using an existing OV-PRS checkpoint, pass its root to the evaluation command with `--checkpoint-dir`.
 
 ## Inference
 
 Use the checkpoints produced by training or point `--checkpoint-dir` to your own OV-PRS checkpoint directory.
 
 ```bash
-python inference_pipeline.py \
+python -m ov_prs.inference_pipeline \
   --input /path/to/panorama.jpg \
   --query "the red fire extinguisher" \
   --checkpoint-dir outputs

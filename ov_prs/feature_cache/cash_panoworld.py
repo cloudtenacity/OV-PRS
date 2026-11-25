@@ -12,8 +12,8 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from config_panoworld import BENCHMARK_SPLITS, CACHE_DIR, DATA_ROOT, DO_SAMPLE, MAX_NEW_TOKENS, NUM_BEAMS
-from load_panoworld import load_panoworld
+from ov_prs.config_panoworld import BENCHMARK_SPLITS, CACHE_DIR, DATA_ROOT, DO_SAMPLE, MAX_NEW_TOKENS, NUM_BEAMS
+from ov_prs.load_panoworld import load_panoworld
 
 PW_FEATURE_LAYERS = [2, 13, 24]
 PW_FEAT_HW_CACHE = (15, 30)

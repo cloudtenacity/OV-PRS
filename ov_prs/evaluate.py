@@ -17,8 +17,8 @@ from PIL import Image
 from torch.utils.data import DataLoader
 import cv2
 
-from config_panoworld import OUTPUT_DIR
-from trainv1_stage1_2 import (
+from ov_prs.config_panoworld import OUTPUT_DIR
+from ov_prs.training.trainv1_stage1_2 import (
     build_models, CachedPanoWorldWrapper, APRSReferDataset,
     encode_proposals_with_clip, extract_topk_proposals,
     compute_iou, load_pw_feats, build_priors_for_batch, collate_fn,
@@ -26,7 +26,7 @@ from trainv1_stage1_2 import (
     SPLIT_BASE_TEST, SPLIT_NOVEL_TEST, SPLIT_OOD,
     CACHE_DIR, PW_FEAT_HW, DEVICE, IMAGE_SIZE, MIN_PRED_AREA,
 )
-from trainv1_stage3 import FEAT_DIM, MIN_MASK_AREA, TOPK_COLLECT, RerankScorer, compute_proposal_features
+from ov_prs.training.trainv1_stage3 import FEAT_DIM, MIN_MASK_AREA, TOPK_COLLECT, RerankScorer, compute_proposal_features
 
 SPLIT_MAP = {
     "base_test":  SPLIT_BASE_TEST,
