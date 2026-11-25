@@ -34,16 +34,13 @@ Alignment details
 
 Checkpoint initialization
     A fresh phase 0 uses the initial Mask2Former weights. Later phases use
-    the proposal and fusion weights from stage0/best. A fresh phase 2
-    initializes the mapper from stage1/best. A resumed phase loads its
-    trained components from its own best checkpoint.
+    the proposal and fusion weights from stage 0. A fresh phase 2
+    initializes the mapper from stage 1. A resumed phase loads weights from
+    its own stage. Each stage uses its final checkpoint by default.
 
     RESUME_STAGE0=1 TRAIN_STAGE=0 python -m ov_prs.training.trainv1_stage1_2
     RESUME_STAGE1=1 TRAIN_STAGE=1 python -m ov_prs.training.trainv1_stage1_2
     RESUME_STAGE2=1 TRAIN_STAGE=2 python -m ov_prs.training.trainv1_stage1_2
-
-    Set BEST_SCORE_OVERRIDE when resuming from a checkpoint whose previous
-    best score is unavailable in best_meta.json.
 
 Other options
     Set GC=0 with TRAIN_STAGE=0 to disable gradient checkpointing.
@@ -55,9 +52,7 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import argparse
 import glob
-import math
 import random
-import json
 import numpy as np
 import pandas as pd
 import torch
@@ -95,7 +90,6 @@ TRAIN_STAGE   = int(os.environ.get("TRAIN_STAGE", 2))
 RESUME_STAGE0 = os.environ.get("RESUME_STAGE0", "0") == "1"
 RESUME_STAGE1 = os.environ.get("RESUME_STAGE1", "0") == "1"
 RESUME_STAGE2 = os.environ.get("RESUME_STAGE2", "0") == "1"
-BEST_SCORE_OVERRIDE = os.environ.get("BEST_SCORE_OVERRIDE", "")
 
 USE_GC = os.environ.get("GC", "1" if TRAIN_STAGE == 0 else "0") == "1"
 
@@ -126,11 +120,9 @@ LOG_EVERY           = 20
 
 EVAL_EVERY_EPOCHS   = 2 if TRAIN_STAGE == 0 else 1
 VIS_EVERY_EPOCHS    = 2 if TRAIN_STAGE == 0 else 1
-SAVE_EVERY_EPOCHS   = 2 if TRAIN_STAGE == 0 else 1
 
 EVAL_START_EPOCH = 1
 
-EARLY_STOP_PATIENCE = 10
 MIN_MASK_AREA       = 30
 NUM_QUERIES         = 100
 
@@ -193,8 +185,6 @@ if SMOKE_TEST:
     MAX_TRAIN_SAMPLES = 8
     MAX_VAL_SAMPLES   = 4
     VIS_NUM_SAMPLES_PER_SPLIT = 4
-    SAVE_EVERY_EPOCHS = 999
-    EARLY_STOP_PATIENCE = 999
     EVAL_EVERY_EPOCHS = 1
     VIS_EVERY_EPOCHS = 1
     EVAL_START_EPOCH = 1
@@ -368,27 +358,6 @@ def save_checkpoint(model, clip_vision, mapper, prior_fusion, visual_projection,
     print(f"  [Save] {ckpt_dir}")
 
 
-def _save_best_meta(ckpt_dir, best_score, score_name):
-    os.makedirs(ckpt_dir, exist_ok=True)
-    meta = {"best_score": float(best_score), "score_name": score_name}
-    meta_path = os.path.join(ckpt_dir, "best_meta.json")
-    with open(meta_path, "w") as f:
-        json.dump(meta, f)
-    print(f"    [Save] best_meta.json (best_score={best_score:.4f}, name={score_name})")
-
-
-def _load_best_score(ckpt_dir):
-    meta_path = os.path.join(ckpt_dir, "best_meta.json")
-    if not os.path.exists(meta_path):
-        return None, None
-    try:
-        with open(meta_path) as f:
-            meta = json.load(f)
-        return meta.get("best_score", None), meta.get("score_name", None)
-    except Exception:
-        return None, None
-
-
 def _has_any(ckpt_dir, filenames):
     if not os.path.isdir(ckpt_dir):
         return False
@@ -459,10 +428,19 @@ def load_checkpoint(ckpt_dir, clip_vision, mapper, prior_fusion,
             _load_peft_adapter_to_model(clip_vision, clip_lora_dir, name="CLIP LoRA")
 
 
+def _stage_checkpoint(root, stage):
+    stage_dir = os.path.join(root, f"stage{stage}")
+    final = os.path.join(stage_dir, "final")
+    legacy = os.path.join(stage_dir, "best")
+    if not os.path.isdir(final) and os.path.isdir(legacy):
+        return legacy
+    return final
+
+
 def validate_aligned_checkpoint(checkpoint_dir):
     """Check the proposal and semantic checkpoints consumed by Stage 3."""
-    proposal_dir = os.path.join(checkpoint_dir, "stage0", "best")
-    alignment_dir = os.path.join(checkpoint_dir, "stage2", "best")
+    proposal_dir = _stage_checkpoint(checkpoint_dir, 0)
+    alignment_dir = _stage_checkpoint(checkpoint_dir, 2)
     required = [
         os.path.join(proposal_dir, "prior_fusion.pt"),
         os.path.join(alignment_dir, "mapper.pt"),
@@ -503,27 +481,27 @@ def _resolve_load_plan():
 
     if TRAIN_STAGE == 0:
         if resume:
-            d = os.path.join(OUTPUT_DIR, "stage0", "best")
+            d = _stage_checkpoint(OUTPUT_DIR, 0)
             if _has_any(d, ["m2f_full_state.pt"]):
                 return [(d, ["m2f", "prior_fusion"])]
         return []
 
-    d0 = os.path.join(OUTPUT_DIR, "stage0", "best")
+    d0 = _stage_checkpoint(OUTPUT_DIR, 0)
     if _has_any(d0, ["m2f_full_state.pt"]):
         plan.append((d0, ["m2f", "prior_fusion"]))
 
     if TRAIN_STAGE == 1:
         if resume:
-            d = os.path.join(OUTPUT_DIR, "stage1", "best")
+            d = _stage_checkpoint(OUTPUT_DIR, 1)
             if os.path.exists(os.path.join(d, "mapper.pt")):
                 plan.append((d, ["mapper"]))
     elif TRAIN_STAGE == 2:
         if resume:
-            d = os.path.join(OUTPUT_DIR, "stage2", "best")
+            d = _stage_checkpoint(OUTPUT_DIR, 2)
             if os.path.exists(os.path.join(d, "mapper.pt")):
                 plan.append((d, ["mapper", "visual_projection", "clip_lora"]))
         else:
-            d = os.path.join(OUTPUT_DIR, "stage1", "best")
+            d = _stage_checkpoint(OUTPUT_DIR, 1)
             if os.path.exists(os.path.join(d, "mapper.pt")):
                 plan.append((d, ["mapper"]))
 
@@ -1714,7 +1692,6 @@ def train():
     print(f"RESUME_STAGE0   = {RESUME_STAGE0}")
     print(f"RESUME_STAGE1   = {RESUME_STAGE1}")
     print(f"RESUME_STAGE2   = {RESUME_STAGE2}")
-    print(f"BEST_OVERRIDE   = {BEST_SCORE_OVERRIDE if BEST_SCORE_OVERRIDE else '(none)'}")
     print(f"STAGE_DIR       = {STAGE_DIR}")
     print(f"BATCH_SIZE      = {BATCH_SIZE}")
     print(f"TOP_K_TRAIN     = {TOP_K_TRAIN}")
@@ -1740,28 +1717,6 @@ def train():
                             train_stage=TRAIN_STAGE, modules=modules)
     else:
         print(f"\n[Start] Stage {TRAIN_STAGE} 从头开始训练")
-
-    best_score = -1.0
-    score_name_prev = None
-    if _is_resume_current_stage():
-        if BEST_SCORE_OVERRIDE:
-            try:
-                best_score = float(BEST_SCORE_OVERRIDE)
-                print(f"  [Resume] best_score from BEST_SCORE_OVERRIDE = {best_score:.4f}")
-            except ValueError:
-                print(f"  [Resume] BEST_SCORE_OVERRIDE='{BEST_SCORE_OVERRIDE}' 无法解析为数字，忽略")
-        else:
-            meta_score, meta_name = _load_best_score(os.path.join(STAGE_DIR, "best"))
-            if meta_score is not None:
-                best_score = meta_score
-                score_name_prev = meta_name
-                print(f"  [Resume] best_score from best_meta.json = {best_score:.4f} "
-                      f"(name={meta_name})")
-            else:
-                print(f"  [Resume] 无 best_meta.json 也无 BEST_SCORE_OVERRIDE，"
-                      f"best_score 初始化为 -1.0（下一个 epoch 一定会覆盖 best）")
-                print(f"  [Resume] 如需保护已有 best，请设置 "
-                      f"BEST_SCORE_OVERRIDE=<当前 best 的 score>")
 
     print("\n构建数据集...")
     train_ds = APRSReferDataset(
@@ -1855,8 +1810,6 @@ def train():
 
     _set_train_modes(model, prior_fusion, mapper, clip_vision)
 
-    patience = 0
-
     for epoch in range(NUM_EPOCHS):
         total = {"main": 0.0, "align": 0.0, "clip": 0.0, "region": 0.0}
         valid_steps = 0
@@ -1900,33 +1853,14 @@ def train():
                 print(f"  [Val-Oracle] base={m_b:.4f} ({h_b}/{n_b}) "
                       f"| novel={m_n:.4f} ({h_n}/{n_n}) "
                       f"| ood={m_o:.4f} ({h_o}/{n_o}) | H={H:.4f}")
-                score = m_b; score_name = "oracle_base"
             elif TRAIN_STAGE == 1:
                 print(f"  [Val-CLIP] base={m_b:.4f} oracle={o_b:.4f} cos={cos_b:.3f} ({h_b}/{n_b}) "
                       f"| novel={m_n:.4f} oracle={o_n:.4f} cos={cos_n:.3f} ({h_n}/{n_n}) "
                       f"| ood={m_o:.4f} ({h_o}/{n_o}) | H={H:.4f}")
-                score = math.sqrt(max(cos_b, 0) * max(cos_n, 0))
-                score_name = "cos_geo"
             elif TRAIN_STAGE == 2:
                 print(f"  [Val-CLIP] base={m_b:.4f} oracle={o_b:.4f} cos={cos_b:.3f} ({h_b}/{n_b}) "
                       f"| novel={m_n:.4f} oracle={o_n:.4f} cos={cos_n:.3f} ({h_n}/{n_n}) "
                       f"| ood={m_o:.4f} ({h_o}/{o_n}) | H={H:.4f}")
-                score = m_b; score_name = "iou_base"
-
-            if score > best_score:
-                best_score = score; patience = 0
-                if not SMOKE_TEST:
-                    save_checkpoint(model, clip_vision, mapper, prior_fusion,
-                                    visual_projection, processor, clip_tokenizer,
-                                    os.path.join(STAGE_DIR, "best"))
-                    _save_best_meta(os.path.join(STAGE_DIR, "best"),
-                                    best_score, score_name)
-                    print(f"  ✅ best {score_name}={score:.4f} -> {STAGE_DIR}/best")
-            else:
-                patience += 1
-                print(f"  ⚠️ no improve ({patience}/{EARLY_STOP_PATIENCE})")
-                if patience >= EARLY_STOP_PATIENCE:
-                    print("⏹️ 早停"); break
 
         if (epoch + 1) >= EVAL_START_EPOCH and (epoch + 1) % VIS_EVERY_EPOCHS == 0:
             for name, ids in vis_by_split.items():
@@ -1935,7 +1869,7 @@ def train():
                                   cache_wrapper, val_dss[name], ids,
                                   epoch+1, name)
 
-        if not SMOKE_TEST and (epoch + 1) % SAVE_EVERY_EPOCHS == 0:
+        if not SMOKE_TEST:
             save_checkpoint(model, clip_vision, mapper, prior_fusion,
                             visual_projection, processor, clip_tokenizer,
                             os.path.join(STAGE_DIR, f"epoch{epoch+1}"))
@@ -1944,7 +1878,7 @@ def train():
         save_checkpoint(model, clip_vision, mapper, prior_fusion,
                         visual_projection, processor, clip_tokenizer,
                         os.path.join(STAGE_DIR, "final"))
-        print(f"\n✅ 结束 | Best score={best_score:.4f}")
+        print(f"Completed {NUM_EPOCHS} epochs.")
 
 
 if __name__ == "__main__":

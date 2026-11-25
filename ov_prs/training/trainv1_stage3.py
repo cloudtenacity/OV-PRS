@@ -3,8 +3,8 @@
 """Train and evaluate the pairwise proposal ranker.
 
 All 12 input features are available at inference. The loader also accepts
-legacy 13-feature caches. Training selects the best top-1 ranker on
-base_test and monitors Novel and OOD. Evaluation reads saved features.
+legacy 13-feature caches. Training saves each epoch and reports evaluation
+metrics at the configured interval. Evaluation reads saved features.
 
     python -m ov_prs.training.trainv1_stage3 --stage collect
     python -m ov_prs.training.trainv1_stage3 --stage train
@@ -492,11 +492,9 @@ def stage_train(epochs=30, lr=1e-3, seed=42, eval_every=5):
           f"(in_dim={D})")
 
     opt = torch.optim.AdamW(ranker.parameters(), lr=lr, weight_decay=0.01)
-    best_te_top1 = 0.0
-    best_ep = 0
-    best_state = None
-
-    print(f"\n训练 {epochs} epoch（每 {eval_every} 轮验证，best 按 base_test 选）...")
+    epoch_dir = os.path.join(OUTPUT_DIR, "stage3")
+    os.makedirs(epoch_dir, exist_ok=True)
+    print(f"\nTraining for {epochs} epochs (evaluation every {eval_every} epochs).")
     for ep in range(epochs):
         ranker.train()
         tr_loss = 0.0; tr_n = 0
@@ -534,31 +532,16 @@ def stage_train(epochs=30, lr=1e-3, seed=42, eval_every=5):
                     monitor_parts.append(f"{tag}={s_top1:.4f}")
                 monitor_str = "  " + "  ".join(monitor_parts) if monitor_parts else ""
 
-            improved = ""
-            if ranker_top1 > best_te_top1:
-                best_te_top1 = ranker_top1
-                best_ep = ep + 1
-                best_state = {k: v.detach().cpu().clone()
-                              for k, v in ranker.state_dict().items()}
-                improved = "  ★"
-
             print(f"  Ep {ep+1:>3}  loss {tr_loss:.4f}  "
                   f"[base_test] cos={cos_top1:.4f}  multi={multi_top1:.4f}  "
-                  f"ranker={ranker_top1:.4f}{monitor_str}{improved}")
+                  f"ranker={ranker_top1:.4f}{monitor_str}")
         else:
             print(f"  Ep {ep+1:>3}  loss {tr_loss:.4f}")
 
-    if best_state is not None:
-        ranker.load_state_dict(best_state)
-    else:
-        best_state = {k: v.detach().cpu().clone()
-                      for k, v in ranker.state_dict().items()}
-        ranker.load_state_dict(best_state)
-        best_ep = epochs
-        print("\n  ⚠️ 没触发过验证，保存最后一个 epoch 的模型")
+        torch.save(ranker.state_dict(), os.path.join(epoch_dir, f"epoch{ep + 1}.pt"))
+
     torch.save(ranker.state_dict(), RANKER_PATH)
-    print(f"\n✅ 保存 {RANKER_PATH}  "
-          f"best_ep={best_ep}  best_base_test_top1={best_te_top1:.4f}")
+    print(f"Saved final ranker to {RANKER_PATH} after {epochs} epochs.")
 
 
 # ============ Stage: eval ============
@@ -656,8 +639,10 @@ def main():
     parser.add_argument("--force_collect", action="store_true")
     parser.add_argument("--collect_splits", nargs="+", choices=COLLECT_SPLIT_ROOTS)
     parser.add_argument("--checkpoint-dir", default=OUTPUT_DIR,
-                        help="Root containing stage0/best and stage2/best")
+                        help="Root containing proposal and alignment checkpoints")
     args = parser.parse_args()
+    if args.stage in ("train", "all") and (args.epochs < 1 or args.eval_every < 1):
+        parser.error("--epochs and --eval_every must be positive")
 
     random.seed(args.seed)
     np.random.seed(args.seed)

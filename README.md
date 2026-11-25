@@ -66,7 +66,9 @@ python -m ov_prs.training.trainv1_stage3 --stage all
 python -m ov_prs.evaluate --no_vis
 ```
 
-Training writes checkpoints to `outputs/` by default. If using an existing OV-PRS checkpoint, pass its root to the evaluation command with `--checkpoint-dir`.
+Training runs for the configured number of epochs and reports the same evaluation metrics. It saves each epoch under `outputs/stage{0,1,2}/epochN/` and `outputs/stage3/epochN.pt`. Later stages and evaluation use the final checkpoints by default. The loader also supports existing `stage0/best` and `stage2/best` directories.
+
+To evaluate a specific set of checkpoints, put the selected proposal and alignment directories at `stage0/final/` and `stage2/final/` under a separate root and place the selected ranker file there as `ranker.pt`. Pass that root to `ov_prs.evaluate` or `ov_prs.inference_pipeline` with `--checkpoint-dir`. Use the same proposal and alignment checkpoints that were used to collect the ranker's training features.
 
 ## Inference
 

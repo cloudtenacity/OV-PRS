@@ -477,7 +477,7 @@ def main():
     parser.add_argument("--input", required=True)
     parser.add_argument("--query", required=True)
     parser.add_argument("--checkpoint-dir", default=OUTPUT_DIR,
-                        help="Root containing stage0/best, stage2/best and ranker.pt")
+                        help="Root containing proposal and alignment checkpoints and ranker.pt")
     parser.add_argument("--out_dir", default=os.path.join(OUTPUT_DIR, "inference"))
     parser.add_argument("--name", help="Output basename, defaulting to the input stem")
     parser.add_argument("--vis_every", type=int, default=30,

@@ -393,7 +393,7 @@ def write_report(all_results, report_path, ranker_path):
     L.append("Ranker Final Test Report")
     L.append(f"Generated : {time.strftime('%Y-%m-%d %H:%M:%S')}")
     L.append(f"Ranker    : {ranker_path}  (in_dim={FEAT_DIM})")
-    L.append("Model     : stage0/best proposals + stage2/best semantic alignment")
+    L.append("Model     : Stage 0 proposals + Stage 2 semantic alignment")
     L.append(f"Images    : {os.path.dirname(report_path)}/{{split}}/")
     L.append("=" * 110)
     L.append("")
@@ -555,7 +555,7 @@ def main():
     parser.add_argument("--no_vis", action="store_true", help="Write the report without comparison images")
     parser.add_argument("--vis_max", type=int, help="Maximum comparison images per split")
     parser.add_argument("--checkpoint-dir", default=OUTPUT_DIR,
-                        help="Root containing stage0/best, stage2/best and ranker.pt")
+                        help="Root containing proposal and alignment checkpoints and ranker.pt")
     parser.add_argument("--out-dir", default=os.path.join(OUTPUT_DIR, "results"))
     args = parser.parse_args()
 
