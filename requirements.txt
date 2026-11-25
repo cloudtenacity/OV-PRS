@@ -1,0 +1,14 @@
+# Install the CUDA 12.6 builds of torch and torchvision first, as shown in README.md.
+torch==2.7.0
+torchvision==0.22.0
+transformers==5.22.2
+peft==0.20.0
+accelerate==1.15.0
+numpy==1.26.4
+pandas==3.0.5
+Pillow==12.3.0
+opencv-python-headless==4.11.0.86
+scipy==1.17.1
+safetensors==0.8.0
+omegaconf==2.3.1
+tqdm==4.70.0

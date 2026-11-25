@@ -1,0 +1,19 @@
+# Python and local configuration
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+.DS_Store
+
+# Models, data, and generated results
+/data/
+/cache/
+/outputs/
+/checkpoints/
+/third_party/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
