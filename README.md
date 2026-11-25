@@ -6,6 +6,7 @@
     <sup>2</sup> School of Artificial Intelligence and Robotics and the National Engineering Research Center of Robot Visual Perception and Control Technology, Hunan University, China<br>
     <sup>3</sup> Institute for Anthropomatics and Robotics, Karlsruhe Institute of Technology, Germany
   </p>
+  <p><a href="https://cloudtenacity.github.io/ROLO/">Project page</a></p>
   <img src="docs/teaser.png" alt="Robot Only Look Once overview, from single-panorama referring segmentation to inspection target acquisition." width="920">
 </div>
 
