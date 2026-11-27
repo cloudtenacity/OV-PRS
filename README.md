@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Robot Only Looks Once: Advancing ERP-Native Open-Vocabulary Panoramic Referring Segmentation for Embodied Target Acquisition and Inspection</h1>
-  <p><strong>Yunxiao Yang<sup>1</sup>, Kai Luo<sup>2</sup>, Haoran Lin<sup>2</sup>, Di Wen<sup>3</sup>, Ruiping Liu<sup>3</sup>, Kunyu Peng<sup>3</sup>, Wenrui Chen<sup>2</sup>, and Kailun Yang<sup>1,2</sup></strong></p>
+  <p><strong>Yunxiao Yang<sup>1</sup>, Kai Luo<sup>2</sup>, Haoran Lin<sup>2</sup>, Di Wen<sup>3</sup>, Ruiping Liu<sup>3</sup>, Kunyu Peng<sup>3</sup>, and Kailun Yang<sup>1,2</sup></strong></p>
   <p>
     <sup>1</sup> College of Integrated Circuits, Hunan University, China<br>
     <sup>2</sup> School of Artificial Intelligence and Robotics and the National Engineering Research Center of Robot Visual Perception and Control Technology, Hunan University, China<br>
